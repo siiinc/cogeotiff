@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.1.1](https://github.com/blacha/cogeotiff/compare/core-v8.1.0...core-v8.1.1) (2023-10-09)
+
+
+### Bug Fixes
+
+* **core:** expose CogTiffImage ([aca2c58](https://github.com/blacha/cogeotiff/commit/aca2c58f2c6ad0ccf95310eedd7402d50b9e77bd))
+
 ## [8.1.0](https://github.com/blacha/cogeotiff/compare/core-v8.0.2...core-v8.1.0) (2023-08-23)
 
 
