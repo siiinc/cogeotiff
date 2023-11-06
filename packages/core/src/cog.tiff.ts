@@ -13,6 +13,8 @@ import { toHex } from './util/util.hex.js';
 
 export class CogTiff {
   /** Read 16KB blocks at a time */
+  fixedHeaderSize?: number;
+  /** Read 16KB blocks at a time */
   defaultReadSize = 16 * 1024;
   /** Where this cog is fetching its data from */
   source: Source;
@@ -30,13 +32,22 @@ export class CogTiff {
   isInitialized = false;
 
   private _initPromise?: Promise<CogTiff>;
-  constructor(source: Source) {
+  constructor(source: Source, headerSize?: number, tileSize?: number) {
     this.source = source;
+    if (typeof headerSize !== 'undefined') {
+        this.fixedHeaderSize = headerSize;
+    }
+    if (typeof tileSize !== 'undefined') {
+      this.defaultReadSize = tileSize;
+    }
   }
 
   /** Create a COG and initialize it by reading the COG headers */
   static create(source: Source): Promise<CogTiff> {
     return new CogTiff(source).init();
+  }
+  static createEx(source: Source, headerSize: number, tileSize: number): Promise<CogTiff> {
+    return new CogTiff(source, headerSize, tileSize).init();
   }
 
   /**
@@ -73,10 +84,22 @@ export class CogTiff {
     return firstImage;
   }
 
+  /**
+   * Return resolution of each image
+   */
+  getResolutions(): Array<[number, number, number]> {
+    const resolutions: [number, number, number][] = [];
+    for (let img of this.images) {
+      resolutions.push(img.resolution);
+    }
+    return resolutions;
+  }
+
   /** Read the Starting header and all Image headers from the source */
   private async readHeader(): Promise<CogTiff> {
     if (this.isInitialized) return this;
-    const bytes = new DataView(await this.source.fetch(0, this.defaultReadSize)) as DataViewOffset;
+    const readSize = typeof this.fixedHeaderSize !== 'undefined' ? this.fixedHeaderSize : this.defaultReadSize;
+    const bytes = new DataView(await this.source.fetch(0, readSize)) as DataViewOffset;
     bytes.sourceOffset = 0;
 
     let offset = 0;
@@ -118,14 +141,17 @@ export class CogTiff {
 
       // Ensure at least 1KB near at the IFD offset is ready for reading
       // TODO is 1KB enough, most IFD entries are in the order of 100-300 bytes
-      if (!hasBytes(lastView, nextOffsetIfd, 1024)) {
-        const bytes = await this.source.fetch(
-          nextOffsetIfd,
-          getMaxLength(this.source, nextOffsetIfd, this.defaultReadSize),
-        );
-        lastView = new DataView(bytes) as DataViewOffset;
-        lastView.sourceOffset = nextOffsetIfd;
+      if(typeof this.fixedHeaderSize === 'undefined'){
+        if (!hasBytes(lastView, nextOffsetIfd, 1024)) {
+          const bytes = await this.source.fetch(
+            nextOffsetIfd,
+            getMaxLength(this.source, nextOffsetIfd, this.defaultReadSize),
+            );
+          lastView = new DataView(bytes) as DataViewOffset;
+          lastView.sourceOffset = nextOffsetIfd;
+        }
       }
+
       nextOffsetIfd = await this.readIfd(nextOffsetIfd, lastView);
     }
 

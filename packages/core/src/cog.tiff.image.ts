@@ -75,6 +75,9 @@ export class CogTiffImage {
    */
   async init(loadGeoTags = true): Promise<void> {
     const requiredTags = [
+      this.fetch(TiffTag.SamplesPerPixel),
+      this.fetch(TiffTag.SampleFormat),
+      this.fetch(TiffTag.BitsPerSample),
       this.fetch(TiffTag.Compression),
       this.fetch(TiffTag.ImageHeight),
       this.fetch(TiffTag.ImageWidth),
@@ -280,6 +283,72 @@ export class CogTiffImage {
     const compression = this.value(TiffTag.Compression);
     if (compression == null || typeof compression !== 'number') return null;
     return TiffCompression[compression];
+  }
+
+  /**
+   * Get the photometricInterpretation used by the tile
+   *
+   * @see {@link PhotometricInterpretation}
+   *
+   * @returns photometricInterpretation
+   *
+   * 0 = WhiteIsZero. For bilevel and grayscale images: 0 is imaged as white.
+   * 1 = BlackIsZero. For bilevel and grayscale images: 0 is imaged as black.
+   * 2 = RGB. RGB value of (0,0,0) represents black, and (255,255,255) represents white, assuming 8-bit components. The components are stored in the indicated order: first Red, then Green, then Blue.
+   * 3 = Palette color. In this model, a color is described with a single component. The value of the component is used as an index into the red, green and blue curves in the ColorMap field to retrieve an RGB triplet that defines the color. When PhotometricInterpretation=3 is used, ColorMap must be present and SamplesPerPixel must be 1.
+   * 4 = Transparency Mask. This means that the image is used to define an irregularly shaped region of another image in the same TIFF file. SamplesPerPixel and BitsPerSample must be 1. PackBits compression is recommended. The 1-bits define the interior of the region; the 0-bits define the exterior of the region.
+   *
+   */
+  get photometricInterpretation(): number | null {
+    const photometricInterpretation = this.value(TiffTag.PhotometricInterpretation);
+    if (photometricInterpretation == null || typeof photometricInterpretation !== 'number') return null;
+    return photometricInterpretation;
+  }
+
+  /**
+   * Get the sample format used by the tile
+   *
+   * @returns sample format "UNSIGNED_INTEGER"=1, "SIGNED_INTEGER"=2, "IEEE_FLOATING_POINT"=3
+   */
+  get sampleFormat(): number[] | null {
+    const sampleFormat = this.value(TiffTag.SampleFormat);
+    if (typeof sampleFormat === 'number') return [sampleFormat];
+    if (Array.isArray(sampleFormat)) return sampleFormat;
+    return null;
+  }
+
+  /**
+   * Get the bits per sample used by the tile
+   *
+   * @returns bits per sample
+   */
+  get bitsPerSample(): number[] | null {
+    const bitsPerSample = this.value(TiffTag.BitsPerSample);
+    if (typeof bitsPerSample === 'number') return [bitsPerSample];
+    if (Array.isArray(bitsPerSample)) return bitsPerSample;
+    return null;
+  }
+
+  /**
+   * Get the samples per pixel used by the tile
+   *
+   * @returns the number of samples per pixel eg the number of bands in the image
+   */
+  get samplesPerPixel(): number | null {
+    const samplePerPixel = this.value(TiffTag.SamplesPerPixel);
+    if (samplePerPixel == null || typeof samplePerPixel !== 'number') return null;
+    return samplePerPixel;
+  }
+
+  /**
+   * Get the GDAL No data value if any
+   *
+   * @returns the no data value
+   */
+  get gdalNoData(): number | null {
+    const gdalNoData = this.value(TiffTag.GdalNoData);
+    if (gdalNoData == null || typeof gdalNoData !== 'number') return null;
+    return gdalNoData;
   }
 
   /**
